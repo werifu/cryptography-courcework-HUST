@@ -43,11 +43,11 @@ void initKeyMap(uint key) {
 uint encrypt(uint key, uint plain);
 inline uint getRoundKey(uint key, uint round) { return keyMap[round]; }
 inline uint putAllSbox(uint num, uint* sbox_) { return sbox_[num]; }
+
 int main() {
     initSbox();
     initPbox();
     initSPbox();
-
     int n;
     scanf("%d", &n);
     getchar();
@@ -102,53 +102,55 @@ int main() {
         sort(sorted_key24, sorted_key24 + 256, [=](uint a, uint b) {
             return count[a >> 4][a & 0xf] > count[b >> 4][b & 0xf];
         });
-        block2 = sorted_key24[0] >> 4;
         // The second chain
         // X_5 ^ X_6 ^ X_7 ^ X_8 ^ U4_2 ^ U4_4 ^ U4_6 ^ U4_8 ^ U4_ 10 ^
         // U4_12
-        for (int i = 0; i < 8000; i++) {
-            uint x = plains[i];
-            uint y = ciphers[i];
-            for (int l1 = 0; l1 < 16; l1++) {
-                for (int l2 = 0; l2 < 16; l2++) {
-                    uint y1 = (y >> 12) & 0xf;
-                    uint y2 = (y >> 8) & 0xf;
-                    uint y3 = (y >> 4) & 0xf;
-                    uint v4_1 = l1 ^ y1;
-                    uint v4_2 = block2 ^ y2;
-                    uint v4_3 = l2 ^ y3;
-                    uint u4_1 = rsbox[v4_1];
-                    uint u4_2 = rsbox[v4_2];
-                    uint u4_3 = rsbox[v4_3];
-                    bool z = ((x >> 11) & 1) ^ ((x >> 10) & 1) ^
-                             ((x >> 9) & 1) ^ ((x >> 8) & 1) ^
-                             ((u4_1 >> 2) & 1) ^ (u4_1 & 1) ^
-                             ((u4_2 >> 2) & 1) ^ (u4_2 & 1) ^
-                             ((u4_3 >> 2) & 1) ^ (u4_3 & 1);
-                    if (z == 0) {
-                        count2[l1][l2]++;
+        for (int blk2 = 0; blk2 < 256; blk2++) {
+            // NEED CLEAR THE COUNTER ! It wasted much time... QAQ
+            memset(count2, 0, sizeof(count2));
+            block2 = sorted_key24[blk2] >> 4;
+            block4 = sorted_key24[blk2] & 0xf;
+            for (int i = 0; i < 8000; i++) {
+                uint x = plains[i];
+                uint y = ciphers[i];
+                for (int l1 = 0; l1 < 16; l1++) {
+                    for (int l2 = 0; l2 < 16; l2++) {
+                        uint y1 = (y >> 12) & 0xf;
+                        uint y2 = (y >> 8) & 0xf;
+                        uint y3 = (y >> 4) & 0xf;
+                        uint v4_1 = l1 ^ y1;
+                        uint v4_2 = block2 ^ y2;
+                        uint v4_3 = l2 ^ y3;
+                        uint u4_1 = rsbox[v4_1];
+                        uint u4_2 = rsbox[v4_2];
+                        uint u4_3 = rsbox[v4_3];
+                        bool z = ((x >> 11) & 1) ^ ((x >> 10) & 1) ^
+                                 ((x >> 9) & 1) ^ ((x >> 8) & 1) ^
+                                 ((u4_1 >> 2) & 1) ^ (u4_1 & 1) ^
+                                 ((u4_2 >> 2) & 1) ^ (u4_2 & 1) ^
+                                 ((u4_3 >> 2) & 1) ^ (u4_3 & 1);
+                        if (z == 0) {
+                            count2[l1][l2]++;
+                        }
                     }
                 }
             }
-        }
-        uint block1 = 0;
-        uint block3 = 0;
-        maxCount = 0;
-        for (int l1 = 0; l1 < 16; l1++) {
-            for (int l2 = 0; l2 < 16; l2++) {
-                makeAbs(count2[l1][l2]);
-                sorted_key13[(l1 << 4) | l2] = (l1 << 4) | l2;
+            uint block1 = 0;
+            uint block3 = 0;
+            maxCount = 0;
+            for (int l1 = 0; l1 < 16; l1++) {
+                for (int l2 = 0; l2 < 16; l2++) {
+                    makeAbs(count2[l1][l2]);
+                    sorted_key13[(l1 << 4) | l2] = (l1 << 4) | l2;
+                }
             }
-        }
-        sort(sorted_key13, sorted_key13 + 256, [=](uint a, uint b) {
-            return count2[a >> 4][a & 0xf] > count2[b >> 4][b & 0xf];
-        });
-        // travers all the keys
-        // key = (???? ???? ???? ???? block1 blcok2 block3 block4)
-        // because the K5 is the low 16 bits
-        for (int b24 = 0; b24 < 5; b24++) {
-            block2 = sorted_key24[b24] >> 4;
-            block4 = sorted_key24[b24] & 0xf;
+            sort(sorted_key13, sorted_key13 + 256, [=](uint a, uint b) {
+                return count2[a >> 4][a & 0xf] > count2[b >> 4][b & 0xf];
+            });
+            // travers all the keys
+            // key = (???? ???? ???? ???? block1 blcok2 block3 block4)
+            // because the K5 is the low 16 bits
+            bool foundFlag = false;
             for (int b13 = 0; b13 < 5; b13++) {
                 block1 = sorted_key13[b13] >> 4;
                 block3 = sorted_key13[b13] & 0xf;
@@ -159,11 +161,14 @@ int main() {
                     initKeyMap(wholeKey);
                     if (encrypt(wholeKey, plains[0]) != ciphers[0]) continue;
                     if (encrypt(wholeKey, plains[1]) != ciphers[1]) continue;
-                    if (encrypt(wholeKey, plains[2]) != ciphers[2]) continue;
+                    // if (encrypt(wholeKey, plains[2]) != ciphers[2]) continue;
                     printf("%08x\n", wholeKey);
+                    foundFlag = true;
                     break;
                 }
+                if (foundFlag) break;
             }
+            if (foundFlag) break;
         }
     }
     return 0;
