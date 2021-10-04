@@ -5,6 +5,13 @@
 #include <unordered_map>
 #include <vector>
 
+#define DEBUG
+#ifdef DEBUG
+#include <chrono>
+using namespace std::chrono;
+#include <iostream>
+#endif
+
 using namespace std;
 typedef uint uint;
 uint SHA1_tmp;
@@ -127,7 +134,10 @@ bool checkChain(char* head, uint target_sha1[5]) {
 }
 
 int main() {
-    // freopen("./sample/1.in", "r", stdin);
+#ifdef DEBUG
+    freopen("./sample/1.in", "r", stdin);
+    auto start = high_resolution_clock::now();
+#endif
     int m;
     scanf("%d", &m);
     vector<char[8]> head(m), tail(m);
@@ -145,34 +155,36 @@ int main() {
     uint sha1_tmp[5];
     char buf[8];
     // i is the start point
-    bool found_flag = false;
     char* found_head;
     for (int i = 10000; i > 0; i--) {
         memcpy(sha1_tmp, sha1_value, sizeof(sha1_tmp));
-        for (int j = i; j <= 10000; j++) {
+        for (int j = i; j < 10000; j++) {
             int r = j % 100 == 0 ? 100 : j % 100;
             R(sha1_tmp, buf, r);
-            if (r == 100) {
-                string buf_str = buf;
-                if (hmap.find(buf_str) != hmap.end()) {
-                    found_head = hmap[buf_str];
-                    // found_flag = true;
-                    bool real_found = checkChain(found_head, sha1_value);
-                    if (real_found) return 0;
-                    break;
-                }
-            }
             UnitSHA1(buf, sizeof(buf), sha1_tmp);
         }
-        // if (found_flag) {
-        //     break;
-        // }
+        R(sha1_tmp, buf, 100);
+        string buf_str = buf;
+        if (hmap.find(buf_str) != hmap.end()) {
+            // the chain is not useless
+            found_head = hmap[buf_str];
+            // found_flag = true;
+            bool real_found = checkChain(found_head, sha1_value);
+            if (real_found) {
+#ifdef DEBUG
+                auto end = high_resolution_clock::now();
+                auto duration = duration_cast<milliseconds>(end - start);
+                printf("All running time: %lu ms\n", duration.count());
+#endif
+                return 0;
+            }
+        }
     }
-    if (!found_flag) {
-        printf("None\n");
-        return 0;
-    }
-    if (checkChain(found_head, sha1_value)) return 0;
     printf("None\n");
+#ifdef DEBUG
+    auto end = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(end - start);
+    printf("All running time: %lu ms\n", duration.count());
+#endif
     return 0;
 }
