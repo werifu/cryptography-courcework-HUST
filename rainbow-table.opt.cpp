@@ -151,30 +151,32 @@ int main() {
           &sha1_value[3], &sha1_value[4]);
     uint sha1_tmp[5];
     char buf[8];
-    // i is the start point
     char* found_head;
-    for (int i = 10000; i > 0; i--) {
+    // i is the first R function
+    for (int i = 1; i <= 100; i++) {
         memcpy(sha1_tmp, sha1_value, sizeof(sha1_tmp));
-        for (int j = i; j < 10000; j++) {
-            int r = j % 100 == 0 ? 100 : j % 100;
+        for (int j = 0; j < 10000; j++) {
+            int r = (j + i) % 100 == 0 ? 100 : (j + i) % 100;
             R(sha1_tmp, buf, r);
-            UnitSHA1(buf, sizeof(buf), sha1_tmp);
-        }
-        R(sha1_tmp, buf, 100);
-        string buf_str = buf;
-        if (hmap.find(buf_str) != hmap.end()) {
-            // the chain is not useless
-            found_head = hmap[buf_str];
-            // found_flag = true;
-            bool real_found = checkChain(found_head, sha1_value);
-            if (real_found) {
+            string buf_str = buf;
+            if (r == 100) {
+                if (hmap.find(buf_str) != hmap.end()) {
+                    // the chain is not useless
+                    found_head = hmap[buf_str];
+                    // found_flag = true;
+                    bool real_found = checkChain(found_head, sha1_value);
+                    if (real_found) {
 #ifdef DEBUG
-                auto end = high_resolution_clock::now();
-                auto duration = duration_cast<milliseconds>(end - start);
-                printf("All running time: %lu ms\n", duration.count());
+                        auto end = high_resolution_clock::now();
+                        auto duration =
+                            duration_cast<milliseconds>(end - start);
+                        printf("All running time: %lu ms\n", duration.count());
 #endif
-                return 0;
+                        return 0;
+                    }
+                }
             }
+            UnitSHA1(buf, sizeof(buf), sha1_tmp);
         }
     }
     printf("None\n");
